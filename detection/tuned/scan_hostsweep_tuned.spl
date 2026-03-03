@@ -1,0 +1,11 @@
+index=* source=*eve.json event_type=flow
+
+/* OPTIONAL allowlist: replace placeholders or remove this line */
+| search NOT src_ip IN ("<IP_INTERNAL_SCANNER>", "<IP_MONITORING>")
+
+| bin _time span=2m
+| stats dc(dest_ip) as unique_hosts dc(dest_port) as unique_ports values(dest_port) as ports count as flows by _time, src_ip
+| where unique_hosts>=20 AND unique_ports<=5
+| eval severity=case(unique_hosts>=60,"high", unique_hosts>=30,"medium", true(),"low")
+| where severity!="low"
+| sort -unique_hosts
