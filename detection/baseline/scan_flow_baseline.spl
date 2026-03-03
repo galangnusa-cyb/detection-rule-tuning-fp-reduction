@@ -1,0 +1,5 @@
+index=* source=*eve.json event_type=flow
+| bin _time span=5m
+| stats dc(dest_port) as unique_ports values(dest_port) as ports count as flows by _time, src_ip, dest_ip
+| where unique_ports>=5
+| sort -unique_ports
