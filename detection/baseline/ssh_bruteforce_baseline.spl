@@ -1,0 +1,12 @@
+/* Baseline SSH brute-force detection (noisy by design)
+   Logic: >=5 failed SSH attempts within 5 minutes from a single src_ip
+   Update index/sourcetype/source to match your environment.
+*/
+
+index=* (source="/var/log/auth.log" OR sourcetype=linux_secure OR sourcetype=auth*)
+("Failed password" OR "authentication failure")
+| rex "from (?<src_ip>\d{1,3}(?:\.\d{1,3}){3})"
+| bin _time span=5m
+| stats count as fails dc(user) as distinct_users values(user) as users by _time, src_ip, host
+| where fails>=5
+| sort -fails
