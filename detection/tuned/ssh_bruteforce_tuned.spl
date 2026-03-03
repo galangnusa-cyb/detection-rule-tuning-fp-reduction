@@ -1,0 +1,18 @@
+index=* (source="/var/log/auth.log" OR sourcetype=linux_secure OR sourcetype=auth*)
+("Failed password" OR "authentication failure")
+| rex "from (?<src_ip>\d{1,3}(?:\.\d{1,3}){3})"
+
+/* OPTIONAL allowlist: replace placeholders or remove this line */
+| search NOT src_ip IN ("<IP_JUMPHOST_OR_ADMIN>", "<IP_INTERNAL_SCANNER>")
+
+| bin _time span=5m
+| stats count as fails dc(user) as distinct_users values(user) as users by _time, src_ip, host
+| eval severity=case(
+    fails>=15,"high",
+    fails>=10 AND distinct_users>=2,"high",
+    fails>=10,"medium",
+    fails>=6 AND distinct_users>=3,"medium",
+    true(),"low"
+)
+| where severity!="low"
+| sort -fails
